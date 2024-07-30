@@ -4,8 +4,8 @@ Pdu::Pdu()
 {
 	_size = 0;
 	_buffer = nullptr;
-	memset(_name, 0, sizeof(_name));
-	memset(_message, 0, sizeof(_message));
+	std::memset(_name, 0, sizeof(_name));
+	std::memset(_message, 0, sizeof(_message));
 }
 
 Pdu::Pdu(uint32_t size,const char* name,const char* message)
@@ -42,7 +42,6 @@ Pdu& Pdu::readPdu(const char* data) {
 	std::memcpy(_name, data + SIZE_BYTES, sizeof(_name));
 	std::memcpy(_message, data + SIZE_BYTES + sizeof(_name),sizeof(_message));
 	
-
 	return *this;
 }
 

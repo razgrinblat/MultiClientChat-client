@@ -49,19 +49,23 @@ void Client::sendMessage()
 		{
 			continue;
 		}
-		if (userInput == "exit")
+		if (userInput == "$exit$")
 		{
+			std::string disconnected_msg = _username + " disconneted from the chat!";
+			Pdu pdu(disconnected_msg.size(), "EXIT MESSAGE", disconnected_msg.c_str()); //create the pdu
+			const char* data_pdu = pdu.writePdu();
+			send(_client_fd, data_pdu, BUFFERSIZE, 0);
 			std::cout << "by by!!";
-			send(_client_fd, userInput.c_str(), userInput.size() + 1, 0);
 			close();
 		}
 		if (userInput == "$users$")
 		{
-			char buffer[1024];
-			send(_client_fd, userInput.c_str(), userInput.size() + 1, 0);
+			Pdu pdu(0, "USERS", "");
+			const char* data_pdu = pdu.writePdu();
+			send(_client_fd, data_pdu, BUFFERSIZE, 0);
 			continue;
 		}
-		uint32_t size = userInput.size()+ _username.size(); //size of data(username and message)
+		uint32_t size = userInput.size(); //size of message
 		Pdu pdu(size, _username.c_str(), userInput.c_str());
 		const char* data_pdu = pdu.writePdu();
 		if (userInput.size() > 0)
@@ -74,36 +78,23 @@ void Client::sendMessage()
 			}
 		}
 	}
-	
-
 }
 
 void Client::recieveMessage()
 {
 	char buffer[BUFFERSIZE];
 	//todo use std::array
-	//const char* user_command = "$users$";
-	static constexpr auto user_command = "$users$";
 	while (true)
 	{
 		std::memset(&buffer, 0, BUFFERSIZE);
 		int bytesReceived = recv(_client_fd, buffer, BUFFERSIZE, 0);
 		if (bytesReceived > 0)
 		{
-			int n = sizeof(user_command) - 1;
-			if (std::strncmp(buffer, user_command, n) == 0)
-			{
-				std::cout << "*******************************" << std::endl;
-				std::cout << buffer;
-				std::cout << "*******************************" << std::endl;
-			}
-			else
 			{
 				Pdu pdu = Pdu();
 				pdu.readPdu(buffer);
 				std::cout << "[" << pdu.getName() << "] " << pdu.getMessage() << std::endl;
 			}
-
 		}
 	}
 }
@@ -114,10 +105,15 @@ void Client::openClient()
 	int bytesReceived = recv(_client_fd, welcome_msg, BUFFERSIZE, 0);
 	welcome_msg[bytesReceived] = '\0';
 	std::cout << welcome_msg << std::endl; //output welcome message
-	std::cout << "Enter your name: ";
-	std::getline(std::cin, _username);
+	std::cout << "Enter your name:";
+	do {
+		std::getline(std::cin, _username);
+		if (_username.size() > NAME_SIZE)
+		{
+			std::cout << "name is to long,enter your name again:";
+		}
+	} while (_username.size() > NAME_SIZE);
 
-	
 	
 	while (true)
 	{
@@ -125,9 +121,7 @@ void Client::openClient()
 		std::thread sending_thread = std::thread(&Client::sendMessage, this);
 		recieving_thread.join();
 		sending_thread.join();
-
 	}
-
 }
 
 void Client::close()
