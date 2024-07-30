@@ -93,7 +93,7 @@ void Client::recieveMessage()
 			{
 				Pdu pdu = Pdu();
 				pdu.readPdu(buffer);
-				std::cout << "[" << pdu.getName() << "] " << pdu.getMessage() << std::endl;
+				std::cout << _color << "[" << pdu.getName() << "] " << pdu.getMessage() << RESET_COLOR << std::endl;
 			}
 		}
 	}
@@ -101,6 +101,7 @@ void Client::recieveMessage()
 
 void Client::openClient()
 {
+
 	char welcome_msg[BUFFERSIZE];
 	int bytesReceived = recv(_client_fd, welcome_msg, BUFFERSIZE, 0);
 	welcome_msg[bytesReceived] = '\0';
@@ -113,6 +114,8 @@ void Client::openClient()
 			std::cout << "name is to long,enter your name again:";
 		}
 	} while (_username.size() > NAME_SIZE);
+	getColor();
+	
 
 	
 	while (true)
@@ -122,6 +125,30 @@ void Client::openClient()
 		recieving_thread.join();
 		sending_thread.join();
 	}
+}
+
+void Client::addUserColor()
+{
+	const std::string RESET = "\033[0m";
+	const std::string RED = "\033[31m";
+	const std::string GREEN = "\033[32m";
+	const std::string YELLOW = "\033[33m";
+	const std::string BLUE = "\033[34m";
+	const std::string MAGENTA = "\033[35m";
+	const std::string CYAN = "\033[36m";
+	const std::string WHITE = "\033[37m";
+
+	std::unordered_map<int, std::string> clientColors = {
+		{1, RED},
+		{2, GREEN},
+		{3, YELLOW},
+		{4, BLUE},
+		{5, MAGENTA},
+		{6, CYAN},
+		{7, WHITE}
+	};
+
+	 _color = clientColors[_client_fd % clientColors.size() + 1];
 }
 
 void Client::close()

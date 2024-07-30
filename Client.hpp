@@ -6,6 +6,7 @@
 #include <thread> 
 #include "Pdu.hpp"
 #include <cstdint>
+#include <unordered_map>
 #pragma comment(lib,"ws2_32.lib")
 
 
@@ -15,7 +16,9 @@ private:
 	WSADATA _ws;
 	SOCKET _client_fd;
 	struct sockaddr_in _clientAddr;
+	std::string _color;
 	std::string _username;
+	const std::string RESET_COLOR = "\033[0m";
 	static constexpr const char* IP = "127.0.0.1";
 	static constexpr int PORT = 8080;
 	static constexpr int BUFFERSIZE = 1058;
@@ -53,6 +56,8 @@ public:
  * including shutting down Winsock.
  */
 	void close();
+
+	void addUserColor();
 	
 
 
