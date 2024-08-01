@@ -6,6 +6,7 @@
 #include <thread> 
 #include "Pdu.hpp"
 #include <cstdint>
+#include <array>
 #include <unordered_map>
 #pragma comment(lib,"ws2_32.lib")
 
@@ -19,45 +20,45 @@ private:
 	std::string _color;
 	std::string _username;
 	const std::string RESET_COLOR = "\033[0m";
-	static constexpr const char* IP = "127.0.0.1";
-	static constexpr int PORT = 8080;
-	static constexpr int BUFFERSIZE = 1058;
-	static constexpr int NAME_SIZE = 30;
+	static constexpr auto IP = "127.0.0.1";
+	static constexpr auto USERS_COMMAND = "$users$";
+	static constexpr auto EXIT_MESSAGE_COMMAND = "$exit$";
+	static constexpr auto PORT = 8080;
+	static constexpr auto BUFFERSIZE = 1054;
+	static constexpr auto NAME_SIZE = 30;
+	static constexpr auto WELCOME_BUFFER = 2000;
 	
 public:
 	Client();
+	~Client();
+	void initializeWinsock();
+	void initializeSocket();
+	void connectSocket();
+
+	void handleExitCommand();
+	void handleUsersCommand();
+	void sendPdu(std::string user_input);
 	/**
- * @brief Sends messages to the server.
- *
- * This function continuously reads user input from the console and sends it to
- * the server. Special commands `$exit$` and `$users$` are handled to disconnect
- * from the server and request the list of connected users, respectively.
+ * @brief Sends user input to the server.
+ * Handles `$exit$` to disconnect and `$users$` to request a user list.
  */
 	void sendMessage();
 	/**
  * @brief Receives messages from the server.
- *
- * This function continuously listens for messages from the server and displays
- * them. It uses a buffer to receive data and then decodes it using a PDU.
+ * It uses a buffer to receive data and then decodes it using a PDU.
  */
 	void recieveMessage();
 	/**
  * @brief Starts the client and handles user input and server communication.
- *
- * This function displays the server's welcome message and prompts the user for
- * a username. It then creates separate threads for receiving and sending
- * messages.
+
  */
 	void openClient();
-	/**
- * @brief Closes the client and cleans up resources.
- *
- * This function closes the client's socket and performs necessary cleanup,
- * including shutting down Winsock.
- */
-	void close();
-
+	/// @brief Add color for every user
 	void addUserColor();
+	/*
+ * @brief Closes the client and cleans up resources.
+ */
+	void close(int status);
 	
 
 
