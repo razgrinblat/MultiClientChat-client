@@ -3,7 +3,7 @@
 int main()
 {
 	try {
-		Client client = Client();
+		Client client;
 		client.openClient();
 	}
 	catch (const std::exception& e)

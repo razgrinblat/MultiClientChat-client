@@ -5,11 +5,10 @@ Client::Client()
 	initializeWinsock();
 	initializeSocket();
 	connectSocket();
-
 }
 Client::~Client()
 {
-	close(EXIT_SUCCESS);
+	close();
 }
 
 void Client::initializeWinsock()
@@ -52,33 +51,19 @@ void Client::connectSocket()
 	}
 }
 
-void Client::handleExitCommand()
-{
-	std::string disconnected_msg = _username + " disconneted from the chat!";
-	Pdu pdu("EXIT MESSAGE", disconnected_msg.c_str()); //create the pdu
-	const char* data_pdu = pdu.writePdu();
-	send(_client_fd, data_pdu, BUFFERSIZE, 0);
-	std::cout << "by by!!";
-	close(EXIT_SUCCESS);
-}
 
-void Client::handleUsersCommand()
+void Client::sendPdu(const std::string& username, const std::string& user_input)
 {
-	Pdu pdu("USERS", "");
-	const char* data_pdu = pdu.writePdu();
-	send(_client_fd, data_pdu, BUFFERSIZE, 0);
-}
-
-void Client::sendPdu(std::string user_input)
-{
-	uint32_t size = user_input.size(); //size of message
-	Pdu pdu(_username.c_str(), user_input.c_str());
-	const char* data_pdu = pdu.writePdu();
-	int sendResult = send(_client_fd, data_pdu, BUFFERSIZE, 0);
+	std::array<char, 5> pdu_size_str = {};
+	pdu_size_str.fill(0);
+	Pdu pdu(username.c_str(), user_input.c_str());
+	std::vector<char> data_pdu = pdu.writePdu();
+	std::snprintf(pdu_size_str.data(), pdu_size_str.size(), "%04d", data_pdu.size());
+	send(_client_fd, pdu_size_str.data(), pdu_size_str.size(), 0); //send the pdu size
+	int sendResult = send(_client_fd, data_pdu.data(), data_pdu.size(), 0);
 	if (sendResult == SOCKET_ERROR)
 	{
-		std::cout << "Error in Sending";
-		close(EXIT_FAILURE);
+		throw std::runtime_error("Error in Sending");
 	}
 }
 
@@ -94,32 +79,38 @@ void Client::sendMessage()
 		}
 		if (userInput == EXIT_MESSAGE_COMMAND)
 		{
-			handleExitCommand();
+			sendPdu(EXIT_MESSAGE, _username + " disconnected from the chat!");
+			std::cout << "bye bye!!";
+			close();
+			break;
 		}
 		if (userInput == USERS_COMMAND)
 		{
-			handleUsersCommand();
+			sendPdu(USERS, "");
 			continue;
 		}
 		if (userInput.size() > 0)
 		{
-			sendPdu(userInput);
+			sendPdu(_username,userInput);
 		}
 	}	
 }
 
 void Client::recieveMessage()
 {
-	std::array<char, BUFFERSIZE> buffer;
+	std::array<char, DATA_SIZE+1> pdu_length_str = {};
 	while (true)
 	{
-		std::memset(&buffer, 0, BUFFERSIZE);
-		int bytesReceived = recv(_client_fd, buffer.data(), BUFFERSIZE, 0);
-		if (bytesReceived > 0)
+		pdu_length_str.fill(0);
+		int bytesReceived = recv(_client_fd, pdu_length_str.data(), DATA_SIZE, 0);
+		if (bytesReceived == DATA_SIZE)
 		{
+			int pdu_length = std::atoi(pdu_length_str.data());
+			std::vector<char> buffer(pdu_length);
+			recv(_client_fd, buffer.data(), pdu_length, 0);
 			Pdu pdu = Pdu();
-			pdu.readPdu(buffer.data());
-			std::cout << _color << "[" << pdu.getName() << "] " << pdu.getMessage() <<  " (" << pdu.getMessageSize() << ")" << RESET_COLOR << std::endl;
+			pdu.readPdu(buffer);
+			std::cout << _color << "[" << pdu.getName() << "] " << pdu.getMessage() << RESET_COLOR << std::endl;
 		}
 	}
 }
@@ -133,17 +124,17 @@ void Client::openClient()
 	std::cout << "Enter your name:";
 	do {
 		std::getline(std::cin, _username);
-		if (_username.size() > NAME_SIZE)
+		if (_username.size() > NAME_MAX_SIZE)
 		{
 			std::cout << "name is to long, enter your name again:";
 		}
-	} while (_username.size() > NAME_SIZE);
+	} while (_username.size() > NAME_MAX_SIZE);
 	addUserColor();
 	
-	std::thread recieving_thread = std::thread(&Client::recieveMessage, this);
-	std::thread sending_thread = std::thread(&Client::sendMessage, this);
-	recieving_thread.join();
-	sending_thread.join();
+	_recieving_thread = std::thread(&Client::recieveMessage, this);
+	_sending_thread = std::thread(&Client::sendMessage, this);
+	_recieving_thread.join();
+	_sending_thread.join();
 }
 
 void Client::addUserColor()
@@ -170,7 +161,7 @@ void Client::addUserColor()
 	 _color = clientColors[_client_fd % clientColors.size() + 1];
 }
 
-void Client::close(int status)
+void Client::close()
 {
 	//close Socket
 	if (closesocket(_client_fd) == SOCKET_ERROR)
@@ -182,5 +173,4 @@ void Client::close(int status)
 	{
 		throw std::runtime_error("cleenup failed \n");
 	}
-	exit(status);
 }

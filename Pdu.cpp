@@ -2,45 +2,42 @@
 
 Pdu::Pdu()
 {
-	_name.assign(NAME_SIZE, '\0');
+	_name = "";
 	_message_size = 0;
-	_message.assign(MESSAGE_SIZE, '\0');
+	_message = "";
 }
 
-Pdu::Pdu(const std::string& name, const std::string& message)
-	: _message_size(message.size()), _name(name), _message(message) {
-	_name.resize(NAME_SIZE, '\0'); 
-	_message.resize(MESSAGE_SIZE, '\0'); 
-}
-
-Pdu::~Pdu()
+Pdu::Pdu(const std::string& name,const std::string& message)
 {
+	_name = std::move(name);
+	_message = std::move(message);
+	_message_size = name.size() + message.size() + TWO;
 }
 
-const char* Pdu::writePdu() {
-	_buffer = std::vector<char>(NAME_SIZE + SIZE_BYTES + MESSAGE_SIZE);
 
-	
+std::vector<char>& Pdu::writePdu() {
+	_buffer = std::vector<char>();
+
 	std::array<char, SIZE_BYTES + 1> message_size_str = {};
 	std::snprintf(message_size_str.data(), message_size_str.size(), "%04d", _message_size);
 
-	std::memcpy(_buffer.data(), _name.c_str(), NAME_SIZE);
-	std::memcpy(_buffer.data() + NAME_SIZE, message_size_str.data(), SIZE_BYTES);
-	std::memcpy(_buffer.data() + NAME_SIZE + SIZE_BYTES, _message.c_str(), MESSAGE_SIZE);
+	_buffer.insert(_buffer.end(), message_size_str.begin(), message_size_str.end() - 1);
+	_buffer.insert(_buffer.end(), _name.begin(), _name.end());
+	_buffer.push_back('\0');
+	_buffer.insert(_buffer.end(), _message.begin(), _message.end());
+	_buffer.push_back('\0');
 
-	return _buffer.data();
+	return _buffer;
 }
 
 
-Pdu& Pdu::readPdu(const char* pdu) {
+void Pdu::readPdu(std::vector<char>& data) {
 
-	std::array<char, SIZE_BYTES + 1> message_size_str = {};
-
-	std::memcpy(message_size_str.data(), pdu + NAME_SIZE, SIZE_BYTES);
-	_message_size = std::stoi(message_size_str.data());
-	_name.assign(pdu, NAME_SIZE);
-	_message.assign(pdu + NAME_SIZE + SIZE_BYTES, MESSAGE_SIZE);
-	return *this;
+	auto nameEnd = std::find(data.begin(), data.end(), '\0');
+	_name.assign(data.begin(), nameEnd);
+	auto messageStart = nameEnd + 1;
+	auto messageEnd = std::find(messageStart, data.end(), '\0');
+	_message.assign(messageStart, messageEnd);
 }
 
 std::string Pdu::getMessage()
@@ -52,9 +49,3 @@ std::string Pdu::getName()
 {
 	return _name;
 }
-
-std::string Pdu::getMessageSize()
-{
-	return std::to_string(_message_size);
-}
-
