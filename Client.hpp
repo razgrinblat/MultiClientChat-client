@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <array>
 #include <unordered_map>
+#include <atomic>
 #pragma comment(lib,"ws2_32.lib")
 
 
@@ -21,13 +22,14 @@ private:
 	std::string _username;
 	std::thread _recieving_thread;
 	std::thread _sending_thread;
+	std::atomic<bool> _running_status{ true };
 	static constexpr auto RESET_COLOR = "\033[0m";
 	static constexpr auto IP = "127.0.0.1";
 	static constexpr auto USERS_COMMAND = "$users$";
 	static constexpr auto EXIT_MESSAGE_COMMAND = "$exit$";
 	static constexpr auto PORT = 8080;
 	static constexpr auto NAME_MAX_SIZE = 30;
-	static constexpr auto DATA_SIZE = 4;
+	static constexpr auto DATA_SIZE = 4; 
 	static constexpr auto WELCOME_BUFFER = 1138;
 	static constexpr auto USERS = "USERS";
 	static constexpr auto EXIT_MESSAGE = "EXIT MESSAGE";
@@ -62,7 +64,9 @@ private:
 	* It uses a buffer to receive data and then decodes it using a PDU.
 	*/
 	void recieveMessage();
-	/// @brief Add color for every user
+	 /*
+	 * @brief Add color for every user
+	 */
 	void addUserColor();
 	/*
 	* @brief Closes the client and cleans up resources.

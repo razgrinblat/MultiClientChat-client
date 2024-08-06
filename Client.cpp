@@ -14,7 +14,7 @@ Client::~Client()
 void Client::initializeWinsock()
 {
 	// Initialize Winsock
-	if (WSAStartup(MAKEWORD(2, 2), &_ws) == SOCKET_ERROR)
+	if (WSAStartup(WINSOCK_VERSION, &_ws) == SOCKET_ERROR)
 	{
 		throw std::runtime_error("WSA Failed to Initialize\n");
 	}
@@ -70,7 +70,7 @@ void Client::sendPdu(const std::string& username, const std::string& user_input)
 void Client::sendMessage()
 {
 	std::string userInput;
-	while (true)
+	while (_running_status.load())
 	{
 		std::getline(std::cin, userInput);
 		if (userInput.empty())
@@ -81,7 +81,7 @@ void Client::sendMessage()
 		{
 			sendPdu(EXIT_MESSAGE, _username + " disconnected from the chat!");
 			std::cout << "bye bye!!";
-			close();
+			_running_status.store(false);
 			break;
 		}
 		if (userInput == USERS_COMMAND)
@@ -89,17 +89,14 @@ void Client::sendMessage()
 			sendPdu(USERS, "");
 			continue;
 		}
-		if (userInput.size() > 0)
-		{
-			sendPdu(_username,userInput);
-		}
+		sendPdu(_username,userInput);
 	}	
 }
 
 void Client::recieveMessage()
 {
 	std::array<char, DATA_SIZE+1> pdu_length_str = {};
-	while (true)
+	while (_running_status.load())
 	{
 		pdu_length_str.fill(0);
 		int bytesReceived = recv(_client_fd, pdu_length_str.data(), DATA_SIZE, 0);
